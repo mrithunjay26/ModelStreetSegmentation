@@ -1,0 +1,75 @@
+
+<html>
+  <head>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+  </head>
+  <body style="">
+
+  	Make sure to run this via a server
+    <br>
+    <input accept="image/*" type='file' id="input_button" />
+  	<br>
+    <img id="img1" src="./image.jpg" style="width: 256px ; height: 256px " /> <!-- make sure that width and height of img tag is 256x256 -->
+    <br>  <br>
+    <button   onclick="predict()">predict</button>
+    <br>
+    <p id="result"> </p>
+
+    <canvas id="canvas" width="128" height="128" style="zoom:2" ></canvas>
+
+
+
+    <script>
+
+      let image = document.getElementById('img1');
+      let input_button = document.getElementById('input_button');
+
+      input_button.onchange = evt => {
+        const [file] = input_button.files
+        if (file) {
+          image.src = URL.createObjectURL(file)
+        }
+      }
+      
+
+      async function predict() {
+        var  model = await tf.loadGraphModel('./model.json');
+        let classes = [  "Void" ,  "Sidewalk" ,  "TrafficLight" ,  "Bicyclist" ,  "Car" ,  "Pedestrian" ,  "SUVPickupTruck" ,  "Wall" ,  "Building" ,  "LaneMkgsDriv" ,  "Road" ,  "Tree" ,  "Misc_Text" ,  "Sky" ,  "Column_Pole" ,  "CartLuggagePram" ,  "OtherMoving" ,  "VegetationMisc" ,  "Truck_Bus" ,  "Fence" ,  "ParkingBlock" ,  "RoadShoulder" ,  "SignSymbol" ,  "TrafficCone" ,  "Bridge" ,  "Archway" ,  "Animal" ,  "MotorcycleScooter" ,  "LaneMkgsNonDriv" ,  "Child" ,  "Tunnel" ,  ] ;
+
+
+        let example = tf.browser.fromPixels(document.getElementById("img1") , 3 ).cast('float32');
+        console.log(  example.shape  )
+        example = example.reshape([1,example.shape[0], example.shape[1] ,example.shape[2]]);
+
+        let prediction = await model.predict(example);
+        prediction = prediction.reshape([128,128,-1])
+        prediction = tf.argMax (prediction, -1)
+
+        let prediction_data = await prediction.data();
+
+        console.log(prediction_data); // the segmentation   output classs IDs
+
+        // now lets generate the visualization image
+
+        const out_bytes = new Uint8ClampedArray(128 * 128 * 4);
+
+        for (let i = 0; i < 128 * 128; ++i) {
+          const j = i * 4;
+          out_bytes[j + 0] = (32 + prediction_data[i]*754)%256;
+          out_bytes[j + 1] = (89+ prediction_data[i]*45)%256;
+          out_bytes[j + 2] = (17 + prediction_data[i]*64)%256;
+          out_bytes[j + 3] = 255;
+        }
+
+
+        const out = new ImageData(out_bytes, 128, 128);
+
+        let canvas = document.getElementById('canvas');
+        let ctx = canvas.getContext('2d');
+
+        ctx.putImageData(out, 0, 0);
+
+      }
+    </script>
+  </body>
+</html>
